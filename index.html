@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Game</title>
+  <link rel="stylesheet" href="templates/css/styles.css?v=1.1" />
+</head>
+<body>
+  <video class="bg-video" autoplay muted loop playsinline>
+    <source src="templates/assets/fondo.mp4?v=1.1" type="video/mp4" />
+  </video>
+
+  <div class="bg-overlay"></div>
+
+  <div class="login-container">
+    <div class="login-box">
+      <div class="logo">
+        <h1>Chiken Runner</h1>
+      </div>
+
+      <form class="login-form" id="loginForm">
+        <div class="input-group">
+          <label for="username">Usuario</label>
+          <input type="text" id="username" placeholder="Tu usuario" required />
+        </div>
+
+        <div class="input-group">
+          <label for="password">Contraseña</label>
+          <input type="password" id="password" placeholder="••••••••" required />
+        </div>
+
+        <div class="options">
+          <label class="remember">
+            <input type="checkbox" />
+            <span>Recordarme</span>
+          </label>
+        </div>
+
+        <p id="mensaje" class="mensaje"></p>
+
+        <button type="submit" class="btn-login" id="btnLogin">Iniciar Sesión</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = "https://api-chicken-runner.monitorealo.online/api/web_admin/loguearse_admin";
+
+    const form = document.getElementById("loginForm");
+    const inputUser = document.getElementById("username");
+    const inputPass = document.getElementById("password");
+    const btnLogin = document.getElementById("btnLogin");
+    const mensaje = document.getElementById("mensaje");
+
+    function mostrarMensaje(texto, tipo) {
+      mensaje.textContent = texto;
+      mensaje.className = "mensaje " + tipo; 
+    }
+
+    [inputUser, inputPass].forEach((input) => {
+      input.addEventListener("input", () => {
+        mensaje.textContent = "";
+        mensaje.className = "mensaje";
+      });
+    });
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const user = inputUser.value.trim();
+      const password = inputPass.value;
+
+      if (!user || !password) {
+        mostrarMensaje("Por favor completa todos los campos", "error");
+        return;
+      }
+
+      btnLogin.disabled = true;
+      btnLogin.textContent = "Iniciando...";
+      mostrarMensaje("", "");
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ user, password }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.status) {
+          mostrarMensaje( data.mensaje, "exito");
+
+          sessionStorage.setItem("admin_logueado", "true");
+          sessionStorage.setItem("admin_user", user);
+
+          setTimeout(() => {
+            window.location.href = "dashboard.html";
+          }, 1000);
+        } else {
+          mostrarMensaje((data.mensaje || "Error al iniciar sesión"), "error");
+        }
+      } catch (error) {
+        console.error(error);
+        mostrarMensaje(" No se pudo conectar con el servidor", "error");
+      } finally {
+        btnLogin.disabled = false;
+        btnLogin.textContent = "Iniciar Sesión";
+      }
+    });
+  </script>
+</body>
+</html>
