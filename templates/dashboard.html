@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard - Chiken Runner</title>
+
+  <!-- Font Awesome (íconos) -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+  />
+
+  <!-- Chart.js (gráfica) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="css/dashboard.css" />
+</head>
+<body>
+  <!-- Video de fondo -->
+  <video class="bg-video" autoplay muted loop playsinline>
+    <source src="assets/fondo.mp4" type="video/mp4" />
+  </video>
+
+  <div class="bg-overlay"></div>
+
+  <!-- Layout principal -->
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <h1>Chiken Runner</h1>
+        <span class="badge">Admin</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="tab-btn active" data-tab="dashboard">
+          <i class="fa-solid fa-chart-line tab-icon"></i>
+          <span>Dashboard</span>
+        </button>
+        <button class="tab-btn" data-tab="usuarios">
+          <i class="fa-solid fa-users tab-icon"></i>
+          <span>Usuarios</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn-logout" id="btnLogout">
+          <i class="fa-solid fa-right-from-bracket"></i> Cerrar Sesión
+        </button>
+      </div>
+    </aside>
+
+    <!-- Contenido principal -->
+    <main class="main-content">
+      <!-- ============ TAB DASHBOARD ============ -->
+      <section class="tab-content active" id="tab-dashboard">
+        <h2 class="tab-title">Dashboard</h2>
+
+        <!-- Tarjetas de stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">
+              <i class="fa-solid fa-user-group"></i>
+            </div>
+            <div class="stat-info">
+              <p class="stat-label">Jugadores Online</p>
+              <h3 class="stat-value" id="statOnline">--</h3>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráfica -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3><i class="fa-solid fa-chart-column"></i> Jugadores Conectados</h3>
+            <span class="chart-status" id="chartStatus">
+              <i class="fa-solid fa-circle"></i> Actualizando...
+            </span>
+          </div>
+          <div class="chart-container">
+            <canvas id="graficaJugadores"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ TAB USUARIOS ============ -->
+      <section class="tab-content" id="tab-usuarios">
+        <h2 class="tab-title">Usuarios</h2>
+        <!-- Aquí irá el contenido de usuarios -->
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // ====== Protección de sesión ======
+    if (!sessionStorage.getItem("admin_logueado")) {
+      window.location.href = "../login.html";
+    }
+
+    // ====== Cambio de tabs ======
+    const tabButtons = document.querySelectorAll(".tab-btn");
+    const tabContents = document.querySelectorAll(".tab-content");
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const tab = btn.dataset.tab;
+        tabButtons.forEach((b) => b.classList.remove("active"));
+        tabContents.forEach((c) => c.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("tab-" + tab).classList.add("active");
+      });
+    });
+
+    // ====== Cerrar sesión ======
+    document.getElementById("btnLogout").addEventListener("click", () => {
+      sessionStorage.removeItem("admin_logueado");
+      sessionStorage.removeItem("admin_user");
+      window.location.href = "../login.html";
+    });
+
+    // ====== Gráfica de jugadores ======
+    const API_ONLINES = "https://api-chicken-runner.monitorealo.online/api/web_admin/onlines";
+
+    const MAX_PUNTOS = 12; // últimos 12 registros visibles
+    const INTERVALO_MS = 5000; // cada 5 segundos
+
+    const labels = [];
+    const dataPoints = [];
+
+    // Crear gráfica
+    const ctx = document.getElementById("graficaJugadores").getContext("2d");
+
+    // Gradiente amarillo para el fill
+    const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+    gradient.addColorStop(0, "rgba(255, 204, 0, 0.4)");
+    gradient.addColorStop(1, "rgba(255, 204, 0, 0.02)");
+
+    const grafica = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: "Jugadores Online",
+            data: dataPoints,
+            borderColor: "#ffcc00",
+            backgroundColor: gradient,
+            borderWidth: 2.5,
+            tension: 0.4,
+            fill: true,
+            pointBackgroundColor: "#ffcc00",
+            pointBorderColor: "#1e1e1e",
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 600 },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "rgba(30,30,30,0.95)",
+            titleColor: "#ffcc00",
+            bodyColor: "#e0e0e0",
+            borderColor: "#ffcc00",
+            borderWidth: 1,
+            padding: 10,
+            displayColors: false,
+            callbacks: {
+              label: (item) => ` ${item.parsed.y} jugadores`,
+            },
+          },
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              color: "#a0a0a0",
+              stepSize: 1,
+              precision: 0,
+            },
+            grid: { color: "rgba(255,255,255,0.05)" },
+          },
+          x: {
+            ticks: { color: "#a0a0a0", maxRotation: 0 },
+            grid: { display: false },
+          },
+        },
+      },
+    });
+
+    // Función para obtener cantidad
+    async function actualizarJugadores() {
+      const statusEl = document.getElementById("chartStatus");
+      try {
+        const res = await fetch(API_ONLINES);
+        const data = await res.json();
+
+        const cantidad = data?.Datos?.info?.Cantidad_users ?? 0;
+
+        // Actualizar tarjeta
+        document.getElementById("statOnline").textContent = cantidad;
+
+        // Hora actual para etiqueta
+        const ahora = new Date();
+        const hora = ahora.toLocaleTimeString("es-ES", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+
+        // Agregar punto
+        labels.push(hora);
+        dataPoints.push(cantidad);
+
+        // Limitar puntos
+        if (labels.length > MAX_PUNTOS) {
+          labels.shift();
+          dataPoints.shift();
+        }
+
+        grafica.update();
+
+        // Indicador de estado
+        statusEl.innerHTML =
+          '<i class="fa-solid fa-circle"></i> En vivo';
+        statusEl.classList.add("live");
+      } catch (err) {
+        console.error("Error al obtener jugadores:", err);
+        statusEl.innerHTML =
+          '<i class="fa-solid fa-triangle-exclamation"></i> Sin conexión';
+        statusEl.classList.remove("live");
+      }
+    }
+
+    // Ejecutar al cargar y luego cada X segundos
+    actualizarJugadores();
+    setInterval(actualizarJugadores, INTERVALO_MS);
+  </script>
+</body>
+</html>
