@@ -98,7 +98,7 @@
           sessionStorage.setItem("admin_user", user);
 
           setTimeout(() => {
-            window.location.href = "/dashboard.html";
+            window.location.href = "templates/dashboard.html";
           }, 1000);
         } else {
           mostrarMensaje((data.mensaje || "Error al iniciar sesión"), "error");
